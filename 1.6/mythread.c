@@ -15,12 +15,12 @@
 #include <unistd.h>
 
 #include <linux/futex.h>
-static inline int futex_wait(volatile int *uaddr, int val) {
-    return syscall(SYS_futex, uaddr, FUTEX_WAIT, val, NULL, NULL, 0);
+static inline int futex_wait(_Atomic int *uaddr, int val) {
+    return syscall(SYS_futex, (int *)uaddr, FUTEX_WAIT, val, NULL, NULL, 0);
 }
 
-static inline int futex_wake(volatile int *uaddr, int n){
-    return syscall(SYS_futex, uaddr, FUTEX_WAKE, n, NULL, NULL, 0);
+static inline int futex_wake(_Atomic int *uaddr, int n){
+    return syscall(SYS_futex, (int *)uaddr, FUTEX_WAKE, n, NULL, NULL, 0);
 }
 
 
@@ -115,4 +115,29 @@ int mythread_create(mythread_t **thr_out,
 
     return 0;
 }
+
+static inline void wait_exited(_Atomic int *state){
+    int s = atomic_load_explicit(state, memory_order_acquire);
+    while (s != THR_EXITED){
+        futex_wait(state, THR_ALIVE);
+        s = atomic_load_explicit(state, memory_order_acquire);
+    }
+}
+
+int mythread_join(mythread_t *t, int *ret_code_out){
+    if (!t) return EINVAL;
+    if (atomic_load_explicit(&t->detached, memory_order_acquire)){
+        return EINVAL;
+    }
+
+    wait_exited(&t->state);
+    if (ret_code_out) *ret_code_out = t->retval;
+
+    if (t->stack) munmap(t->stack, t->stack_size);
+    free(t);
+    return 0;
+}
+
+
+void mythread_yield(void) {sched_yield();}
 
