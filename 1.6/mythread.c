@@ -1,6 +1,28 @@
-#include "mythread.h"
-#include <sys/types.h> 
 #define _GNU_SOURCE
+#include "mythread.h"
+
+#include <errno.h>
+#include <linux/sched.h>
+#include <sched.h>
+#include <stdatomic.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <linux/futex.h>
+static inline int futex_wait(volatile int *uaddr, int val) {
+    return syscall(SYS_futex, uaddr, FUTEX_WAIT, val, NULL, NULL, 0);
+}
+
+static inline int futex_wake(volatile int *uaddr, int n){
+    return syscall(SYS_futex, uaddr, FUTEX_WAKE, n, NULL, NULL, 0);
+}
+
 
 enum thr_state {
     THR_ALIVE = 0,
@@ -15,6 +37,7 @@ struct mythread
     size_t stack_size;
 
     mythread_start_routine start;
+    void *arg;
     
     _Atomic int state;
 
@@ -22,3 +45,74 @@ struct mythread
 
     _Atomic int detached;
 };
+
+static int thread_trampoline(void *arg){
+    struct mythread *t = (struct mythread*)arg;
+
+    int rc = t->start(t->arg);
+    t ->retval = rc;
+
+    atomic_store_explicit(&t->state, THR_EXITED, memory_order_release);
+    futex_wake(&t->state, 1);
+
+    syscall(SYS_exit, 0);
+}
+
+#ifndef CLONE_ARGS_DEFINED
+#define CLONE_ARGS_DEFINED
+#endif
+
+static const int CLONE_FLAGS =
+    CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND |
+    CLONE_THREAD | CLONE_SYSVSEM;
+
+
+static const size_t DEFAULT_STACK = 1 << 20;
+
+int mythread_create(mythread_t **thr_out,
+                    mythread_start_routine start_routine,
+                    void *arg)
+{
+    if (!thr_out || !start_routine) return EINVAL;
+
+    struct mythread *t = calloc(1, sizeof(*t));
+
+    if (!t) return ENOMEM;
+
+    t->stack_size = DEFAULT_STACK;
+
+    void *stk = mmap(NULL, t->stack_size, PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
+
+    if (stk == MAP_FAILED){
+        int e = errno;
+        free(t);
+        return e ? e : ENOMEM;
+    }
+
+    t->stack = stk;
+    t->start = start_routine;
+    t->arg = arg;
+     
+    atomic_store(&t->state, THR_ALIVE);
+    atomic_store(&t->detached, 0);
+
+    void* child_stack_top = (char *)t->stack + t->stack_size;
+
+    int tid = clone(thread_trampoline, child_stack_top, CLONE_FLAGS, t);
+
+    if (tid == -1){
+        int e = errno;
+        munmap(t->stack, t->stack_size);
+        free(t);
+        return e ? e: EFAULT;
+    }
+
+    t->tid = tid;
+
+    *thr_out = t;
+    
+
+    return 0;
+}
+
