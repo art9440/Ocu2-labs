@@ -14,6 +14,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+static _Atomic int g_live_threads = 1;
+
 #include <linux/futex.h>
 static inline int futex_wait(_Atomic int *uaddr, int val) {
     return syscall(SYS_futex, (int *)uaddr, FUTEX_WAIT, val, NULL, NULL, 0);
@@ -49,17 +51,7 @@ struct mythread
     struct mythread *next;
 };
 
-static int thread_trampoline(void *arg){
-    struct mythread *t = (struct mythread*)arg;
 
-    int rc = t->start(t->arg);
-    t ->retval = rc;
-
-    atomic_store_explicit(&t->state, THR_EXITED, memory_order_release);
-    futex_wake(&t->state, 1);
-
-    syscall(SYS_exit, 0);
-}
 
 #ifndef CLONE_ARGS_DEFINED
 #define CLONE_ARGS_DEFINED
@@ -72,52 +64,7 @@ static const int CLONE_FLAGS =
 
 static const size_t DEFAULT_STACK = 1 << 20;
 
-int mythread_create(mythread_t **thr_out,
-                    mythread_start_routine start_routine,
-                    void *arg)
-{
-    if (!thr_out || !start_routine) return EINVAL;
 
-    struct mythread *t = calloc(1, sizeof(*t));
-
-    if (!t) return ENOMEM;
-
-    t->stack_size = DEFAULT_STACK;
-
-    void *stk = mmap(NULL, t->stack_size, PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
-
-    if (stk == MAP_FAILED){
-        int e = errno;
-        free(t);
-        return e ? e : ENOMEM;
-    }
-
-    t->stack = stk;
-    t->start = start_routine;
-    t->arg = arg;
-     
-    atomic_store(&t->state, THR_ALIVE);
-    atomic_store(&t->detached, 0);
-
-    void* child_stack_top = (char *)t->stack + t->stack_size;
-
-    int tid = clone(thread_trampoline, child_stack_top, CLONE_FLAGS, t);
-
-    if (tid == -1){
-        int e = errno;
-        munmap(t->stack, t->stack_size);
-        free(t);
-        return e ? e: EFAULT;
-    }
-
-    t->tid = tid;
-
-    *thr_out = t;
-    
-
-    return 0;
-}
 
 static inline void wait_exited(_Atomic int *state){
     int s = atomic_load_explicit(state, memory_order_acquire);
@@ -136,8 +83,10 @@ int mythread_join(mythread_t *t, int *ret_code_out){
     wait_exited(&t->state);
     if (ret_code_out) *ret_code_out = t->retval;
 
+    if (!atomic_exchange_explicit(&t->joined, 1, memory_order_acq_rel)) {
     if (t->stack) munmap(t->stack, t->stack_size);
     free(t);
+}
     return 0;
 }
 
@@ -179,7 +128,6 @@ static int reaper_main(void *arg){
         for (mythread_t *t = list; t; ){
             mythread_t *nxt = t->next;
 
-            wait_exited(&t->state);
 
             if(!atomic_exchange_explicit(&t->joined, 1, memory_order_acq_rel)){
                 if (t->stack) munmap(t->stack, t->stack_size);
@@ -244,23 +192,86 @@ int mythread_detach(mythread_t *t){
         return 0;
     }
 
-    if (atomic_load_explicit(&g_reaper_started, memory_order_acquire) == 1) {
-        reap_enqueue(t);
-        return 0;
-    }
-
-    int ok = reaper_started();
-    if(!ok) {
-        wait_exited(&t->state);
-         if (!atomic_exchange_explicit(&t->joined, 1, memory_order_acq_rel)) {
-            if (t->stack) munmap(t->stack, t->stack_size);
-            free(t);
-        }
-        return 0;
-    }
-
-    reap_enqueue(t);
+    (void)reaper_started(); 
     return 0;
 
+}
+
+static int thread_trampoline(void *arg){
+    struct mythread *t = (struct mythread*)arg;
+
+    int rc = t->start(t->arg);
+    t ->retval = rc;
+
+    atomic_store_explicit(&t->state, THR_EXITED, memory_order_release);
+    futex_wake(&t->state, 1);
+
+    if (atomic_load_explicit(&t->detached, memory_order_acquire) &&
+        !atomic_load_explicit(&t->joined, memory_order_acquire)) {
+        (void)reaper_started();   
+        reap_enqueue(t);
+    }
+
+    
+    int left = atomic_fetch_sub_explicit(&g_live_threads, 1, memory_order_acq_rel) - 1;
+    if (left == 0) {
+        syscall(SYS_exit_group, 0);
+    }
+
+    syscall(SYS_exit, 0);
+}
+
+
+
+
+int mythread_create(mythread_t **thr_out,
+                    mythread_start_routine start_routine,
+                    void *arg)
+{
+    if (!thr_out || !start_routine) return EINVAL;
+
+    struct mythread *t = calloc(1, sizeof(*t));
+
+    if (!t) return ENOMEM;
+
+    t->stack_size = DEFAULT_STACK;
+
+    void *stk = mmap(NULL, t->stack_size, PROT_READ | PROT_WRITE,
+                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
+
+    if (stk == MAP_FAILED){
+        int e = errno;
+        free(t);
+        return e ? e : ENOMEM;
+    }
+
+    t->stack = stk;
+    t->start = start_routine;
+    t->arg = arg;
+     
+    atomic_store(&t->state, THR_ALIVE);
+    atomic_store(&t->detached, 0);
+    atomic_store(&t->joined, 0);
+
+    void* child_stack_top = (char *)t->stack + t->stack_size;
+
+    atomic_fetch_add_explicit(&g_live_threads, 1, memory_order_acq_rel);
+
+    int tid = clone(thread_trampoline, child_stack_top, CLONE_FLAGS, t);
+
+    if (tid == -1){
+        int e = errno;
+        atomic_fetch_sub_explicit(&g_live_threads, 1, memory_order_acq_rel);
+        munmap(t->stack, t->stack_size);
+        free(t);
+        return e ? e: EFAULT;
+    }
+
+    t->tid = tid;
+
+    *thr_out = t;
+    
+
+    return 0;
 }
 
