@@ -125,6 +125,38 @@ void uthread_yield(void){
 }
 
 
+int uthread_join(uthread_t *t, void **retval) {
+    if (!t) return -1;
+
+    if (t == current) return -1;
+
+    if (t->state != UTHREAD_FINISHED){
+        if(t->joiner && t->joiner != current) {
+            return -1;
+        }
+
+        t->joiner = current;
+        current->state = UTHREAD_BLOCKED;
+
+        swapcontext(&current->ctx, &sched_ctx);
+    }
+
+    if (retval) *retval = t->retval;
+
+    uthread_destroy(t);
+
+    return 0;
+}
+
+void uthread_destroy(uthread_t *t) {
+    if (!t || t->freed) return;
+
+    if(t->stack) free(t->stack);
+    t->freed = 1;
+    free(t);
+}
+
+
 
 static void schedule_work(void) {
     while(1) {
