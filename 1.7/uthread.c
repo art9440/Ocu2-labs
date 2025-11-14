@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ucontext.h>
+#include <ucontext.h>
 #define _GNU_SOURCE
 #include "uthread.h"
 
@@ -58,3 +59,37 @@ static uthread_t *rq_pop(void) {
 static ucontext_t sched_ctx;
 static ucontext_t main_ctx;
 static uthread_t *current_ctx = NULL;
+
+
+int uthread_create(uthread_t **out, void *(*start_routine)(void *), void *arg){
+    if (!out || !start_routine) return -1;
+
+    uthread_t *t = (uthread_t*)calloc(1, sizeof(*t));
+    if (!t) return -1;
+
+    if (getcontext(&t->ctx) == -1){
+        free(t);
+        return -1;
+    }
+
+    t->stack = malloc(UTHREAD_STACK_SIZE);
+    if (!t->stack){
+        free(t);
+        return -1;
+    }
+
+    t->ctx.uc_stack.ss_sp = t ->stack;
+    t->ctx.uc_stack.ss_size = UTHREAD_STACK_SIZE;
+    t->ctx.uc_link = &sched_ctx;
+
+    t->start_routine = start_routine;
+    t->arg = arg;
+    t->state = UTHREAD_READY;
+    t->joiner = NULL;
+
+    makecontext(&t->ctx, (void (*)(void)) trampoline, 1, t);
+
+    rq_push(t);
+    *out = t;
+    return 0;
+}
