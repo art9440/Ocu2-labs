@@ -115,6 +115,17 @@ static void trampoline(uthread_t *t) {
     //тут после завершения улетим в планировщик, так как t->ctx.uc_link = &sched_ctx;
 }
 
+void uthread_yield(void){
+    if (!current) return;
+
+    current->state = UTHREAD_READY;
+    rq_push(current);
+
+    swapcontext(&current->ctx, &sched_ctx);
+}
+
+
+
 static void schedule_work(void) {
     while(1) {
         uthread_t *next = rq_pop();
