@@ -114,3 +114,37 @@ static void trampoline(uthread_t *t) {
 
     //тут после завершения улетим в планировщик, так как t->ctx.uc_link = &sched_ctx;
 }
+
+static void schedule_work(void) {
+    while(1) {
+        uthread_t *next = rq_pop();
+        if (!next){
+            setcontext(&main_ctx);
+        }
+        current = next;
+        next->state = UTHREAD_RUNNING;
+        swapcontext(&sched_ctx, &next->ctx);
+        current = NULL;
+    }
+}
+
+static void schedule(void) {
+    static int inited = 0;
+
+    if (!inited) {
+        getcontext(&sched_ctx);
+
+        static char sched_stack[UTHREAD_STACK_SIZE];
+
+        sched_ctx.uc_stack.ss_sp = sched_stack;
+        sched_ctx.uc_stack.ss_size = sizeof(sched_stack);
+        sched_ctx.uc_link = &main_ctx;
+        makecontext(&sched_ctx, schedule_work, 0);
+    }
+
+    swapcontext(&main_ctx, &sched_ctx);
+}
+
+void uthread_run(void) {
+    schedule();
+}
