@@ -58,8 +58,9 @@ static uthread_t *rq_pop(void) {
 
 static ucontext_t sched_ctx;
 static ucontext_t main_ctx;
-static uthread_t *current_ctx = NULL;
+static uthread_t *current= NULL;
 
+static void trampoline(uthread_t *t);
 
 int uthread_create(uthread_t **out, void *(*start_routine)(void *), void *arg){
     if (!out || !start_routine) return -1;
@@ -92,4 +93,24 @@ int uthread_create(uthread_t **out, void *(*start_routine)(void *), void *arg){
     rq_push(t);
     *out = t;
     return 0;
+}
+
+static void trampoline(uthread_t *t) {
+    current = t;
+    t->state = UTHREAD_RUNNING;
+
+    void *ret = t->start_routine(t->arg);
+
+    t->retval = ret;
+    t->state = UTHREAD_FINISHED;
+
+    if (t->joiner){
+        if (t->joiner->state == UTHREAD_BLOCKED){
+            t->joiner->state = UTHREAD_READY;
+            rq_push(t->joiner);
+        }
+        t->joiner = NULL;
+    }
+
+    //тут после завершения улетим в планировщик, так как t->ctx.uc_link = &sched_ctx;
 }
