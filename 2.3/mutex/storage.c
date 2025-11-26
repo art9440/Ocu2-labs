@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <time.h>
 #include "storage.h"
 
 void init_storage(Storage* storage) {
@@ -31,9 +32,19 @@ Node* create_node(char const*  value){
 }
 
 void add_to_storage(Storage* storage, const char* value){
-    Node* node = create_node(value);
+    Node* new_node = create_node(value);
+    if (!new_node) return; 
+    if (storage->first == NULL) {
+        storage->first = new_node;
+    }
+    else{
+        Node* cur = storage->first;
+        while (cur->next != NULL){
+            cur = cur->next;
+        }
 
-
+        cur->next = new_node;
+    }
 }
 
 
