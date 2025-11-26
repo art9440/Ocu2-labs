@@ -19,7 +19,8 @@ int main(){
     pthread_t swap_thread1, swap_thread2, swap_thread3;
 
     pthread_create(&asc_thread, NULL, find_ascending_pairs, &storage);
-
+    pthread_create(&desc_thread, NULL, find_descending_pairs, &storage);
+    pthread_create(&equal_thread, NULL, find_equal_pairs, &storage);
 
     free_storage(&storage);
     pthread_mutex_destroy(&print_mutex);

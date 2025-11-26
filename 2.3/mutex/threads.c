@@ -46,3 +46,69 @@ void* find_ascending_pairs(void* arg) {
         pthread_mutex_unlock(&print_mutex);
     }
 }
+
+
+void* find_descending_pairs(void* arg) {
+    Storage * storage = (Storage*)arg;
+
+    while(1) {
+        int count = 0;
+        Node* cur = storage->first;
+
+        while (cur != NULL && cur->next != NULL){
+            pthread_mutex_lock(&cur->sync);
+            pthread_mutex_lock(&cur->next->sync);
+
+            int len1 = string_length(cur->value);
+            int len2 = string_length(cur->next->value);
+
+            if (len1 > len2){
+                count++;
+            }
+
+            pthread_mutex_unlock(&cur->next->sync);
+            pthread_mutex_unlock(&cur->sync);
+            
+            cur = cur->next;
+        }
+
+        __sync_fetch_and_add(&iterations_desc, 1);
+
+        pthread_mutex_lock(&print_mutex);
+        printf("Ascending pairs: %d (iterations: %d)\n", count, iterations_asc);
+        pthread_mutex_unlock(&print_mutex);
+    }
+}
+
+
+void* find_equal_pairs(void* arg) {
+    Storage* storage = (Storage*)arg;
+    
+    while (1) {
+        int count = 0;
+        Node* current = storage->first;
+        
+        while (current != NULL && current->next != NULL) {
+            pthread_mutex_lock(&current->sync);
+            pthread_mutex_lock(&current->next->sync);
+            
+            int len1 = string_length(current->value);
+            int len2 = string_length(current->next->value);
+            
+            if (len1 == len2) {
+                count++;
+            }
+            
+            pthread_mutex_unlock(&current->next->sync);
+            pthread_mutex_unlock(&current->sync);
+            
+            current = current->next;
+        }
+        
+        __sync_fetch_and_add(&iterations_equal, 1);
+        
+        pthread_mutex_lock(&print_mutex);
+        printf("Equal pairs: %d (iterations: %d)\n", count, iterations_equal);
+        pthread_mutex_unlock(&print_mutex);
+    }
+}
