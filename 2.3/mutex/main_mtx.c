@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 #include "storage.h"
 
 
@@ -30,6 +31,8 @@ int main(){
 
 
     pthread_create(&monitor_thread, NULL, thread_monitor, NULL);
+
+     sleep(30);
 
     free_storage(&storage);
     pthread_mutex_destroy(&print_mutex);

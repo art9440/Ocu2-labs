@@ -120,12 +120,11 @@ static int need_swap_equal(int l1, int l2) {
 
 void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long* swap_counter) {
     if (storage->first == NULL || storage->first->next == NULL) {
-        return; 
+        return;
     }
 
-     unsigned int seed = (unsigned int)time(NULL) ^ (unsigned int)pthread_self();
-
-     int max_index = storage->count - 2;
+    unsigned int seed = (unsigned int)time(NULL) ^ (unsigned int)pthread_self();
+    int max_index = storage->count - 2;
     if (max_index < 0) return;
     
     int index = rand_r(&seed) % (max_index + 1);
@@ -133,15 +132,17 @@ void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long*
     Node* prev = NULL;
     Node* current = storage->first;
 
+    
     pthread_mutex_lock(&current->sync);
     
-    for (int i = 0; i < index && current != NULL && current->next != NULL; i++) {
+    
+    for (int i = 0; i < index; i++) {
         Node* next = current->next;
+        if (!next) break;
         
-     
         pthread_mutex_lock(&next->sync);
         
-       
+        
         if (prev != NULL) {
             pthread_mutex_unlock(&prev->sync);
         }
@@ -149,26 +150,30 @@ void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long*
         prev = current;
         current = next;
     }
-
-    if (current == NULL || current->next == NULL) {
-        if (prev != NULL) pthread_mutex_unlock(&prev->sync);
+    
+    
+    Node* next = current->next;
+    if (!next) {
+        
+        if (prev) pthread_mutex_unlock(&prev->sync);
         pthread_mutex_unlock(&current->sync);
         return;
     }
-
-     Node* next = current->next;
-
-     pthread_mutex_lock(&next->sync);
-
-
-     int len1 = string_length(current->value);
+    
+    
+    pthread_mutex_lock(&next->sync);
+    
+    
+    int len1 = string_length(current->value);
     int len2 = string_length(next->value);
     
     if (need_swap(len1, len2)) {
+        
         current->next = next->next;
         next->next = current;
         
         if (prev == NULL) {
+           
             storage->first = next;
         } else {
             prev->next = next;
@@ -176,10 +181,13 @@ void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long*
         
         __sync_fetch_and_add(swap_counter, 1);
     }
-
-    if (prev != NULL) pthread_mutex_unlock(&prev->sync);
-    pthread_mutex_unlock(&current->sync);
+    
+   
     pthread_mutex_unlock(&next->sync);
+    pthread_mutex_unlock(&current->sync);
+    if (prev != NULL) {
+        pthread_mutex_unlock(&prev->sync);
+    }
 }
 
 
