@@ -4,19 +4,27 @@
 #include "storage.h"
 
 
-extern volatile int iterations_asc;
-extern volatile int iterations_desc;
-extern volatile int iterations_equal;
+extern volatile long iterations_asc;
+extern volatile long iterations_desc;
+extern volatile long iterations_equal;
 
-extern volatile int swap_attemts;
-extern volatile int swap_success;
+extern volatile long swap_asc;
+extern volatile long swap_desc;
+extern volatile long swap_eq;
 
 void* find_ascending_pairs(void* arg);
 void* find_descending_pairs(void* arg);
 void* find_equal_pairs(void* arg);
-void* swap_thread(void* arg);
 
 extern pthread_mutex_t print_mutex;
 
-int should_swap(Node* node1, Node* node2);
+void* swap_asc_thread(void* arg);   
+void* swap_desc_thread(void* arg);  
+void* swap_equal_thread(void* arg); 
+
+
+void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long* swap_counter);
+
+void *thread_monitor(void *arg);
+
 #endif

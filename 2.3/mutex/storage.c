@@ -55,6 +55,8 @@ void fill_storage_random(Storage* storage, int count){
         generate_random_string(random_string, 100);
         add_to_storage(storage, random_string);
     }
+
+    storage->count = count;
 }
 
 int string_length(const char* str){

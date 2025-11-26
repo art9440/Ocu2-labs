@@ -12,6 +12,7 @@ typedef struct _Node {
 
 typedef struct _Storage {
     Node *first;
+    int count;
 } Storage;
 
 
