@@ -18,12 +18,30 @@ void generate_random_string(char *buffer, int max_length){
     buffer[length] = '\0';
 }
 
+Node* create_node(char const*  value){
+    Node* new_node = (Node*)malloc(sizeof(Node));
+    if (!new_node) return NULL;
+
+    strncpy(new_node->value, value, 99);
+    new_node->value[99] = '\0';
+    new_node->next = NULL;
+    pthread_mutex_init(&new_node->sync, NULL);
+
+    return new_node;
+}
+
+void add_to_storage(Storage* storage, const char* value){
+    Node* node = create_node(value);
+
+
+}
+
 
 void fill_storage_random(Storage* storage, int count){
 
     for (int i = 0; i < count; i++){
         char random_string[100];
         generate_random_string(random_string, 100);
-
+        add_to_storage(storage, random_string);
     }
 }
