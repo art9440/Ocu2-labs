@@ -1,6 +1,7 @@
 #include "storage.h"
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include "threads.h"
 
@@ -43,9 +44,6 @@ void* find_ascending_pairs(void* arg) {
 
         __sync_fetch_and_add(&iterations_asc, 1);
 
-        pthread_mutex_lock(&print_mutex);
-        printf("Ascending pairs: %d (iterations: %d)\n", count, iterations_asc);
-        pthread_mutex_unlock(&print_mutex);
     }
 }
 
@@ -76,9 +74,6 @@ void* find_descending_pairs(void* arg) {
 
         __sync_fetch_and_add(&iterations_desc, 1);
 
-        pthread_mutex_lock(&print_mutex);
-        printf("Ascending pairs: %d (iterations: %d)\n", count, iterations_asc);
-        pthread_mutex_unlock(&print_mutex);
     }
 }
 
@@ -111,6 +106,114 @@ void* find_equal_pairs(void* arg) {
     }
 }
 
+static int need_swap_asc(int l1, int l2) {
+    return l1 > l2;  
+}
+
+static int need_swap_desc(int l1, int l2) {
+    return l1 < l2;  
+}
+
+static int need_swap_equal(int l1, int l2) {
+    return l1 != l2; 
+}
+
+void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long* swap_counter) {
+    if (storage->first == NULL || storage->first->next == NULL) {
+        return; 
+    }
+
+     unsigned int seed = (unsigned int)time(NULL) ^ (unsigned int)pthread_self();
+
+     int max_index = storage->count - 2;
+    if (max_index < 0) return;
+    
+    int index = rand_r(&seed) % (max_index + 1);
+    
+    Node* prev = NULL;
+    Node* current = storage->first;
+
+    pthread_mutex_lock(&current->sync);
+    
+    for (int i = 0; i < index && current != NULL && current->next != NULL; i++) {
+        Node* next = current->next;
+        
+     
+        pthread_mutex_lock(&next->sync);
+        
+       
+        if (prev != NULL) {
+            pthread_mutex_unlock(&prev->sync);
+        }
+        
+        prev = current;
+        current = next;
+    }
+
+    if (current == NULL || current->next == NULL) {
+        if (prev != NULL) pthread_mutex_unlock(&prev->sync);
+        pthread_mutex_unlock(&current->sync);
+        return;
+    }
+
+     Node* next = current->next;
+
+     pthread_mutex_lock(&next->sync);
+
+
+     int len1 = string_length(current->value);
+    int len2 = string_length(next->value);
+    
+    if (need_swap(len1, len2)) {
+        current->next = next->next;
+        next->next = current;
+        
+        if (prev == NULL) {
+            storage->first = next;
+        } else {
+            prev->next = next;
+        }
+        
+        __sync_fetch_and_add(swap_counter, 1);
+    }
+
+    if (prev != NULL) pthread_mutex_unlock(&prev->sync);
+    pthread_mutex_unlock(&current->sync);
+    pthread_mutex_unlock(&next->sync);
+}
+
+
+void* swap_asc_thread(void* arg) {
+    Storage* storage = (Storage*)arg;
+    
+    while (1) {
+        do_random_swap(storage, need_swap_asc, &swap_asc);
+        usleep(10000); // 10ms задержка
+    }
+    return NULL;
+}
+
+// Поток для перестановки на убывание
+void* swap_desc_thread(void* arg) {
+    Storage* storage = (Storage*)arg;
+    
+    while (1) {
+        do_random_swap(storage, need_swap_desc, &swap_desc);
+        usleep(10000); // 10ms задержка
+    }
+    return NULL;
+}
+
+// Поток для перестановки на равенство
+void* swap_equal_thread(void* arg) {
+    Storage* storage = (Storage*)arg;
+    
+    while (1) {
+        do_random_swap(storage, need_swap_equal, &swap_eq);
+        usleep(10000); // 10ms задержка
+    }
+    return NULL;
+}
 
 void *thread_monitor(void *arg){
     (void)arg;
