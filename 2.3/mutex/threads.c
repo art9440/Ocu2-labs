@@ -1,17 +1,19 @@
 #include "storage.h"
 #include <pthread.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "threads.h"
 
 
 
 
-volatile int iterations_asc = 0;
-volatile int iterations_desc = 0;
-volatile int iterations_equal = 0;
+volatile long iterations_asc = 0;
+volatile long iterations_desc = 0;
+volatile long iterations_equal = 0;
 
-volatile int swap_attempts = 0;
-volatile int swap_successes = 0;
+volatile long swap_asc = 0;
+volatile long swap_desc = 0;
+volatile long swap_eq = 0;
 
 pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -106,9 +108,32 @@ void* find_equal_pairs(void* arg) {
         }
         
         __sync_fetch_and_add(&iterations_equal, 1);
-        
+    }
+}
+
+
+void *thread_monitor(void *arg){
+    (void)arg;
+
+    while (1) {
+        long a_it, d_it, e_it, a_sw, d_sw, e_sw;
+
         pthread_mutex_lock(&print_mutex);
-        printf("Equal pairs: %d (iterations: %d)\n", count, iterations_equal);
+
+        a_it = iterations_asc;
+        d_it = iterations_desc;
+        e_it = iterations_equal;
+
+        a_sw = swap_asc;
+        d_sw = swap_desc;
+        e_sw = swap_eq;
+
         pthread_mutex_unlock(&print_mutex);
+
+         printf("[monitor][mutex] iter: asc=%ld desc=%ld equal=%ld | "
+               "swaps: asc=%ld desc=%ld equal=%ld\n",
+               a_it, d_it, e_it, a_sw, d_sw, e_sw);
+        fflush(stdout);
+        sleep(2);
     }
 }
