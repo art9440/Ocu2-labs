@@ -60,3 +60,14 @@ void fill_storage_random(Storage* storage, int count){
 int string_length(const char* str){
     return strlen(str);
 }
+
+void free_storage(Storage* storage){
+    Node * cur = storage->first;
+    while (cur != NULL){
+        Node* next = cur->next;
+        pthread_mutex_destroy(&cur->sync);
+        free(cur);
+        cur = next;
+    }
+    storage->first = NULL;
+}
