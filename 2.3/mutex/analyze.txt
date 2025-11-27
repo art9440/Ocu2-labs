@@ -1,0 +1,108 @@
+При n = 100:
+[monitor][mutex] iter: asc=2400534 desc=2403106 equal=2402961 | pairs: asc=123383232 desc=112557228 equal=1834355 | swaps: asc=5 desc=12 equal=2770
+Command exited with non-zero status 124
+        Command being timed: "timeout 30s ./build/task23_mutex"
+        User time (seconds): 64.53
+        System time (seconds): 18.29
+        Percent of CPU this job got: 276%
+        Elapsed (wall clock) time (h:mm:ss or m:ss): 0:30.00
+        Average shared text size (kbytes): 0
+        Average unshared data size (kbytes): 0
+        Average stack size (kbytes): 0
+        Average total size (kbytes): 0
+        Maximum resident set size (kbytes): 1912
+        Average resident set size (kbytes): 0
+        Major (requiring I/O) page faults: 0
+        Minor (reclaiming a frame) page faults: 223
+        Voluntary context switches: 2931930
+        Involuntary context switches: 929
+        Swaps: 0
+        File system inputs: 0
+        File system outputs: 0
+        Socket messages sent: 0
+        Socket messages received: 0
+        Signals delivered: 0
+        Page size (bytes): 4096
+        Exit status: 124
+
+
+При n = 1000:
+[monitor][mutex] iter: asc=475193 desc=475271 equal=475268 | pairs: asc=230337031 desc=238795770 equal=5625095 | swaps: asc=9 desc=18 equal=2766
+Command exited with non-zero status 124
+        Command being timed: "timeout 30s ./build/task23_mutex"
+        User time (seconds): 86.35
+        System time (seconds): 8.97
+        Percent of CPU this job got: 317%
+        Elapsed (wall clock) time (h:mm:ss or m:ss): 0:30.00
+        Average shared text size (kbytes): 0
+        Average unshared data size (kbytes): 0
+        Average stack size (kbytes): 0
+        Average total size (kbytes): 0
+        Maximum resident set size (kbytes): 1944
+        Average resident set size (kbytes): 0
+        Major (requiring I/O) page faults: 0
+        Minor (reclaiming a frame) page faults: 256
+        Voluntary context switches: 533765
+        Involuntary context switches: 637
+        Swaps: 0
+        File system inputs: 0
+        File system outputs: 0
+        Socket messages sent: 0
+        Socket messages received: 0
+        Signals delivered: 0
+        Page size (bytes): 4096
+        Exit status: 124
+
+При n = 10000:
+[monitor][mutex] iter: asc=52745 desc=52746 equal=52749 | pairs: asc=261854241 desc=260149547 equal=5398825 | swaps: asc=12 desc=19 equal=2623
+Command exited with non-zero status 124
+        Command being timed: "timeout 30s ./build/task23_mutex"
+        User time (seconds): 94.31
+        System time (seconds): 3.46
+        Percent of CPU this job got: 325%
+        Elapsed (wall clock) time (h:mm:ss or m:ss): 0:30.00
+        Average shared text size (kbytes): 0
+        Average unshared data size (kbytes): 0
+        Average stack size (kbytes): 0
+        Average total size (kbytes): 0
+        Maximum resident set size (kbytes): 3388
+        Average resident set size (kbytes): 0
+        Major (requiring I/O) page faults: 0
+        Minor (reclaiming a frame) page faults: 618
+        Voluntary context switches: 262888
+        Involuntary context switches: 687
+        Swaps: 0
+        File system inputs: 0
+        File system outputs: 0
+        Socket messages sent: 0
+        Socket messages received: 0
+        Signals delivered: 0
+        Page size (bytes): 4096
+        Exit status: 124
+
+При n = 100000:
+[monitor][mutex] iter: asc=51023 desc=51025 equal=51027 | pairs: asc=249909665 desc=254522494 equal=5757238 | swaps: asc=16 desc=14 equal=2711
+Command exited with non-zero status 124
+        Command being timed: "timeout 30s ./build/task23_mutex"
+        User time (seconds): 94.55
+        System time (seconds): 3.23
+        Percent of CPU this job got: 325%
+        Elapsed (wall clock) time (h:mm:ss or m:ss): 0:30.00
+        Average shared text size (kbytes): 0
+        Average unshared data size (kbytes): 0
+        Average stack size (kbytes): 0
+        Average total size (kbytes): 0
+        Maximum resident set size (kbytes): 3456
+        Average resident set size (kbytes): 0
+        Major (requiring I/O) page faults: 0
+        Minor (reclaiming a frame) page faults: 638
+        Voluntary context switches: 231907
+        Involuntary context switches: 946
+        Swaps: 0
+        File system inputs: 0
+        File system outputs: 0
+        Socket messages sent: 0
+        Socket messages received: 0
+        Signals delivered: 0
+        Page size (bytes): 4096
+        Exit status: 124
