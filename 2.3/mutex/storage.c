@@ -7,6 +7,9 @@
 
 void init_storage(Storage* storage) {
     storage->first = NULL;
+    storage->count = 0;
+    storage->stop = 0;
+    pthread_mutex_init(&storage->storage_mutex, NULL);
 }
 
 void generate_random_string(char *buffer, int max_length){
