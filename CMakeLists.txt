@@ -25,5 +25,15 @@ add_executable(task23_mutex
   2.3/mutex/storage.c
 )
 
-target_include_directories(task23_mutex PRIVATE 2.3)
+target_include_directories(task23_mutex PRIVATE 2.3/mutex)
 target_link_libraries(task23_mutex PRIVATE pthread)
+
+add_executable(task23_spin
+  2.3/spin/main_spin.c
+  2.3/spin/threads.c
+  2.3/spin/storage.c
+)
+
+target_include_directories(task23_spin PRIVATE 2.3/spin)
+target_link_libraries(task23_spin PRIVATE pthread)
+
