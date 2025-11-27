@@ -26,36 +26,45 @@ static void scan_pairs(Storage* storage,
                        long* iterations_counter, long* pairs_counter)
 {
     while (!storage->stop) {
-        int count = 0;
-        pthread_mutex_lock(&storage->storage_mutex);
-        Node* cur = storage->first;
-        if (cur != NULL) {
-            pthread_mutex_lock(&cur->sync);
-        }
-        pthread_mutex_unlock(&storage->storage_mutex);
+        long local_pairs = 0;
+        Node *sentinel = storage->first;
+        Node *left = NULL;
+        Node *right = NULL;
 
-        while (cur != NULL && !storage->stop) {
-            
-            Node* next = cur->next;  
-            if (!next) {
-                pthread_mutex_unlock(&cur->sync);
+        pthread_mutex_lock(&sentinel->sync);
+        left = sentinel->next;
+        if (left == NULL) {
+            pthread_mutex_unlock(&sentinel->sync);
+            __sync_fetch_and_add(iterations_counter, 1);
+            continue;
+        }
+        pthread_mutex_lock(&left->sync);
+        pthread_mutex_unlock(&sentinel->sync);
+
+        while (!storage->stop)
+        {
+            right = left->next;
+            if (right == NULL) {
                 break;
             }
+            pthread_mutex_lock(&right->sync);
 
-            pthread_mutex_lock(&next->sync);
-
-            int len1 = string_length(cur->value);
-            int len2 = string_length(next->value);
+            int len1 = string_length(left->value);
+            int len2 = string_length(right->value);
 
             if (cmp(len1, len2)) {
-                count++;
+                local_pairs++;
             }
-
-            pthread_mutex_unlock(&cur->sync);
-            cur = next;
+            pthread_mutex_unlock(&left->sync);
+            left = right;
         }
-        __sync_fetch_and_add(pairs_counter, count);
+
+        pthread_mutex_unlock(&left->sync);
+
         __sync_fetch_and_add(iterations_counter, 1);
+        if (local_pairs > 0) {
+            __sync_fetch_and_add(pairs_counter, local_pairs);
+        }
     }
 }
 
