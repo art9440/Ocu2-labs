@@ -13,7 +13,6 @@ typedef struct _Node {
 typedef struct _Storage {
     Node *first;
     int count;
-    pthread_mutex_t storage_mutex; 
     volatile int stop;
 } Storage;
 
