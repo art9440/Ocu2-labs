@@ -13,7 +13,7 @@ int main(){
     Storage storage;
     init_storage(&storage);
 
-    int n = 100;
+    int n = 100000;
 
     fill_storage_random(&storage, n);
 
@@ -30,10 +30,10 @@ int main(){
     pthread_create(&swap_thread3, NULL, swap_equal_thread, &storage);
 
 
-    pthread_create(&monitor_thread, NULL, thread_monitor, NULL);
+    pthread_create(&monitor_thread, NULL, thread_monitor, &storage);
 
-     sleep(30);
 
-    free_storage(&storage);
-    pthread_mutex_destroy(&print_mutex);
+    pthread_exit(NULL);
+
+	return 0;
 }

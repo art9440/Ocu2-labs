@@ -75,19 +75,19 @@ static int cmp_equal(int l1, int l2) { return l1 == l2; }
 
 void* find_ascending_pairs(void* arg) {
     Storage* storage = (Storage*)arg;
-    scan_pairs(storage, cmp_asc, &iterations_asc, &asc_pairs);
+    scan_pairs(storage, cmp_asc, &iterations_asc, &pairs_asc);
     return NULL;
 }
 
 void* find_descending_pairs(void* arg) {
     Storage* storage = (Storage*)arg;
-    scan_pairs(storage, cmp_desc, &iterations_desc, &desc_pairs);
+    scan_pairs(storage, cmp_desc, &iterations_desc, &pairs_desc);
     return NULL;
 }
 
 void* find_equal_pairs(void* arg) {
     Storage* storage = (Storage*)arg;
-    scan_pairs(storage, cmp_equal, &iterations_equal, &eq_pairs);
+    scan_pairs(storage, cmp_equal, &iterations_equal, &pairs_equal);
     return NULL;
 }
 
@@ -104,29 +104,32 @@ static int need_swap_equal(int l1, int l2) {
 }
 
 void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long* swap_counter) {
-    if (storage->first == NULL || storage->first->next == NULL) {
+    if (storage->count < 2) return;
+
+    Node* sentinel = storage->first;
+    if (!sentinel) return;
+
+    unsigned int seed = (unsigned int)time(NULL) ^ (unsigned int)pthread_self();
+    int max_pair_index = storage->count - 1;
+    int pair_index = rand_r(&seed) % max_pair_index;
+    
+    Node* prev = sentinel;          
+    pthread_mutex_lock(&prev->sync);
+    
+    Node* current = prev->next;
+    if (!current) {
+        pthread_mutex_unlock(&prev->sync);
         return;
     }
-    unsigned int seed = (unsigned int)time(NULL) ^ (unsigned int)pthread_self();
-    int max_index = storage->count - 2;
-    if (max_index < 0) return;
-    
-    int index = rand_r(&seed) % (max_index + 1);
-    
-    Node* prev = NULL;
-    Node* current = storage->first;
-    
     pthread_mutex_lock(&current->sync);
 
-    for (int i = 0; i < index; i++) {
+    for (int i = 0; i < pair_index; i++) {
         Node* next = current->next;
         if (!next) break;
         
         pthread_mutex_lock(&next->sync);
         
-        if (prev != NULL) {
-            pthread_mutex_unlock(&prev->sync);
-        }
+        pthread_mutex_unlock(&prev->sync);
         
         prev = current;
         current = next;
@@ -134,9 +137,8 @@ void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long*
     
     Node* next = current->next;
     if (!next) {
-        
-        if (prev) pthread_mutex_unlock(&prev->sync);
         pthread_mutex_unlock(&current->sync);
+        pthread_mutex_unlock(&prev->sync);
         return;
     }
     
@@ -146,26 +148,19 @@ void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long*
     int len2 = string_length(next->value);
     
     if (need_swap(len1, len2)) {
-        
+
+        prev->next   = next;
         current->next = next->next;
-        next->next = current;
-        
-        if (prev == NULL) {
-           
-            storage->first = next;
-        } else {
-            prev->next = next;
-        }
-        
+        next->next    = current;
+
         __sync_fetch_and_add(swap_counter, 1);
     }
     pthread_mutex_unlock(&next->sync);
     pthread_mutex_unlock(&current->sync);
-    if (prev != NULL) {
-        pthread_mutex_unlock(&prev->sync);
-    }
+    pthread_mutex_unlock(&prev->sync);
 }
 
+// Поток для перестановки на возрастание
 void* swap_asc_thread(void* arg) {
     Storage* storage = (Storage*)arg;
     
@@ -199,27 +194,29 @@ void* swap_equal_thread(void* arg) {
 }
 
 void *thread_monitor(void *arg){
-    (void)arg;
+    Storage *storage = (Storage *)arg;
 
-    while (1) {
-        long a_it, d_it, e_it, a_sw, d_sw, e_sw;
+    while (!storage->stop) {
+    long a_it = iterations_asc;
+    long d_it = iterations_desc;
+    long e_it = iterations_equal;
 
-       
+    long a_sw = swap_asc;
+    long d_sw = swap_desc;
+    long e_sw = swap_eq;
 
-        a_it = iterations_asc;
-        d_it = iterations_desc;
-        e_it = iterations_equal;
+    long a_pairs = pairs_asc;
+    long d_pairs = pairs_desc;
+    long e_pairs = pairs_equal;
 
-        a_sw = swap_asc;
-        d_sw = swap_desc;
-        e_sw = swap_eq;
-
-    
-
-         printf("[monitor][mutex] iter: asc=%ld desc=%ld equal=%ld | "
-               "swaps: asc=%ld desc=%ld equal=%ld\n",
-               a_it, d_it, e_it, a_sw, d_sw, e_sw);
-        fflush(stdout);
-        sleep(2);
-    }
+    printf("[monitor][mutex] iter: asc=%ld desc=%ld equal=%ld | "
+           "pairs: asc=%ld desc=%ld equal=%ld | "
+           "swaps: asc=%ld desc=%ld equal=%ld\n",
+           a_it, d_it, e_it,
+           a_pairs, d_pairs, e_pairs,
+           a_sw, d_sw, e_sw);
+    fflush(stdout);
+    sleep(2);
+}
+    return NULL;
 }

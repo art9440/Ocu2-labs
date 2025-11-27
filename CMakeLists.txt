@@ -19,11 +19,11 @@ target_link_libraries(task16 PRIVATE pthread)
 
 
 # ===== Задание 2.3 =====
-add_executable(task23
+add_executable(task23_mutex
   2.3/mutex/main_mtx.c
   2.3/mutex/threads.c
   2.3/mutex/storage.c
 )
 
-target_include_directories(task23 PRIVATE 2.3)
-target_link_libraries(task23 PRIVATE pthread)
+target_include_directories(task23_mutex PRIVATE 2.3)
+target_link_libraries(task23_mutex PRIVATE pthread)

@@ -8,9 +8,9 @@ extern long iterations_asc;
 extern long iterations_desc;
 extern long iterations_equal;
 
-extern long asc_pairs;
-extern long desc_pairs;
-extern long eq_pairs;
+extern long pairs_asc;
+extern long pairs_desc;
+extern long pairs_equal;
 
 extern long swap_asc;
 extern long swap_desc;
