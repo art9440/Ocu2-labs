@@ -1,6 +1,5 @@
 #include "storage.h"
 #include <pthread.h>
-#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -19,6 +18,7 @@ long swap_desc = 0;
 long swap_eq = 0;
 
 
+
 static void scan_pairs(Storage* storage,
                        int (*cmp)(int, int),
                        long* iterations_counter, long* pairs_counter)
@@ -29,15 +29,16 @@ static void scan_pairs(Storage* storage,
         Node *left = NULL;
         Node *right = NULL;
 
-        pthread_spin_lock(&sentinel->sync);
+    
+        pthread_rwlock_rdlock(&sentinel->sync);
         left = sentinel->next;
         if (left == NULL) {
-            pthread_spin_unlock(&sentinel->sync);
+            pthread_rwlock_unlock(&sentinel->sync);
             __sync_fetch_and_add(iterations_counter, 1);
             continue;
         }
-        pthread_spin_lock(&left->sync);
-        pthread_spin_unlock(&sentinel->sync);
+        pthread_rwlock_rdlock(&left->sync);
+        pthread_rwlock_unlock(&sentinel->sync);
 
         while (!storage->stop)
         {
@@ -45,7 +46,7 @@ static void scan_pairs(Storage* storage,
             if (right == NULL) {
                 break;
             }
-            pthread_spin_lock(&right->sync);
+            pthread_rwlock_rdlock(&right->sync);
 
             int len1 = string_length(left->value);
             int len2 = string_length(right->value);
@@ -53,13 +54,13 @@ static void scan_pairs(Storage* storage,
             if (cmp(len1, len2)) {
                 local_pairs++;
             }
-            pthread_spin_unlock(&left->sync);
+            pthread_rwlock_unlock(&left->sync);
             left = right;
 
             usleep(100);
         }
 
-        pthread_spin_unlock(&left->sync);
+        pthread_rwlock_unlock(&left->sync);
 
         __sync_fetch_and_add(iterations_counter, 1);
         if (local_pairs > 0) {
@@ -116,22 +117,22 @@ void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long*
     int pair_index = rand_r(&seed) % max_pair_index;
     
     Node* prev = sentinel;          
-    pthread_spin_lock(&prev->sync);
+    pthread_rwlock_wrlock(&prev->sync);  
     
     Node* current = prev->next;
     if (!current) {
-        pthread_spin_unlock(&prev->sync);
+        pthread_rwlock_unlock(&prev->sync);
         return;
     }
-    pthread_spin_lock(&current->sync);
+    pthread_rwlock_wrlock(&current->sync);
 
     for (int i = 0; i < pair_index; i++) {
         Node* next = current->next;
         if (!next) break;
         
-        pthread_spin_lock(&next->sync);
+        pthread_rwlock_wrlock(&next->sync);
         
-        pthread_spin_unlock(&prev->sync);
+        pthread_rwlock_unlock(&prev->sync);
         
         prev = current;
         current = next;
@@ -141,12 +142,12 @@ void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long*
     
     Node* next = current->next;
     if (!next) {
-        pthread_spin_unlock(&current->sync);
-        pthread_spin_unlock(&prev->sync);
+        pthread_rwlock_unlock(&current->sync);
+        pthread_rwlock_unlock(&prev->sync);
         return;
     }
     
-    pthread_spin_lock(&next->sync);
+    pthread_rwlock_wrlock(&next->sync);
     
     int len1 = string_length(current->value);
     int len2 = string_length(next->value);
@@ -159,11 +160,11 @@ void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long*
 
         __sync_fetch_and_add(swap_counter, 1);
     }
-    pthread_spin_unlock(&next->sync);
-    pthread_spin_unlock(&current->sync);
-    pthread_spin_unlock(&prev->sync);
+    pthread_rwlock_unlock(&next->sync);
+    pthread_rwlock_unlock(&current->sync);
+    pthread_rwlock_unlock(&prev->sync);
 
-    usleep(100); 
+    usleep(100);
 }
 
 // Поток для перестановки на возрастание
@@ -173,7 +174,6 @@ void* swap_asc_thread(void* arg) {
     while (1) {
         do_random_swap(storage, need_swap_asc, &swap_asc);
         usleep(1000);
-
     }
     return NULL;
 }
@@ -185,7 +185,6 @@ void* swap_desc_thread(void* arg) {
     while (1) {
         do_random_swap(storage, need_swap_desc, &swap_desc);
         usleep(1000);
-
     }
     return NULL;
 }
@@ -203,7 +202,6 @@ void* swap_equal_thread(void* arg) {
 
 void *thread_monitor(void *arg){
     Storage *storage = (Storage *)arg;
-
     while (!storage->stop) {
         long a_it = iterations_asc;
         long d_it = iterations_desc;
@@ -217,7 +215,7 @@ void *thread_monitor(void *arg){
         long d_pairs = pairs_desc;
         long e_pairs = pairs_equal;
 
-        printf("[monitor][spin] iter: asc=%ld desc=%ld equal=%ld | "
+        printf("[monitor][rwlock] iter: asc=%ld desc=%ld equal=%ld | "
                "pairs: asc=%ld desc=%ld equal=%ld | "
                "swaps: asc=%ld desc=%ld equal=%ld\n",
                a_it, d_it, e_it,

@@ -12,7 +12,7 @@ void init_storage(Storage* storage) {
     Node* sentinel = (Node*)malloc(sizeof(Node));
     sentinel->value[0] = '\0';
     sentinel->next = NULL;
-    pthread_spin_init(&sentinel->sync, PTHREAD_PROCESS_PRIVATE);
+    pthread_rwlock_init(&sentinel->sync, NULL);  
 
     storage->first = sentinel;
 }
@@ -34,7 +34,7 @@ Node* create_node(char const*  value){
     strncpy(new_node->value, value, 99);
     new_node->value[99] = '\0';
     new_node->next = NULL;
-    pthread_spin_init(&new_node->sync, PTHREAD_PROCESS_PRIVATE);
+    pthread_rwlock_init(&new_node->sync, NULL);  
 
     return new_node;
 }
@@ -72,7 +72,7 @@ void free_storage(Storage* storage){
     Node * cur = storage->first;
     while (cur != NULL){
         Node* next = cur->next;
-        pthread_spin_destroy(&cur->sync);
+        pthread_rwlock_destroy(&cur->sync); 
         free(cur);
         cur = next;
     }

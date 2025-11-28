@@ -37,3 +37,12 @@ add_executable(task23_spin
 target_include_directories(task23_spin PRIVATE 2.3/spin)
 target_link_libraries(task23_spin PRIVATE pthread)
 
+add_executable(task23_rw
+  2.3/rw/main_rw.c
+  2.3/rw/threads.c
+  2.3/rw/storage.c
+)
+
+target_include_directories(task23_rw PRIVATE 2.3/rw)
+target_link_libraries(task23_rw PRIVATE pthread)
+
