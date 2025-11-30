@@ -18,3 +18,19 @@ add_executable(task16
 )
 target_include_directories(task16 PRIVATE 1.6)
 target_link_libraries(task16 PRIVATE pthread)
+
+
+# ===== Задание 2.4 =====
+add_executable(task24_spin
+  2.4/spin/main_spin.c
+  2.4/spin/spinlock.c
+)
+target_include_directories(task24_spin PRIVATE 2.4)
+target_link_libraries(task24_spin PRIVATE pthread)
+
+add_executable(task24_mutex
+  2.4/mutex/main_mutex.c
+  2.4/mutex/mutex.c
+)
+target_include_directories(task24_mutex PRIVATE 2.4)
+target_link_libraries(task24_mutex PRIVATE pthread)
