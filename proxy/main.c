@@ -10,12 +10,14 @@
 #include <errno.h>
 #include "cache.h"
 #include "proxy.h"
+#include "thread_pool.h"
 
 #include <pthread.h>
 
 
 #define LISTEN_PORT 80
 #define BACKLOG 64
+#define NUM_WORKERS 10
 
 static void die(const char *msg) {
     perror(msg);
@@ -27,6 +29,8 @@ int main(void) {
     signal(SIGPIPE, SIG_IGN);
 
     cache_init();
+
+    thread_pool_init(NUM_WORKERS);
 
     int listen_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (listen_socket < 0) die("socket");
@@ -62,24 +66,7 @@ int main(void) {
             continue;
         }
 
-        client_info_t *ci = (client_info_t *)malloc(sizeof(client_info_t));
-
-         if (!ci) {
-            close(client_socket);
-            continue;
-        }
-        ci->client_sock = client_socket;
-        ci->client_addr = client_addr;
-
-        pthread_t tid;
-
-        if (pthread_create(&tid, NULL, handle_client, ci) != 0) {
-            perror("pthread_create");
-            close(client_socket);
-            free(ci);
-            continue;
-        }
-        pthread_detach(tid);
+       thread_pool_add_client(client_socket);
     }
 
     close(listen_socket);

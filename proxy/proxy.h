@@ -3,9 +3,6 @@
 
 #include <netinet/in.h>
 
-typedef struct {
-    int client_sock;
-    struct sockaddr_in client_addr;
-} client_info_t;
+void handle_client_socket(int client_sock);
 
 #endif
