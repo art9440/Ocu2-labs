@@ -1,4 +1,3 @@
-#include <asm-generic/socket.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,16 +5,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <errno.h>
+
 #include "cache.h"
-#include "proxy.h"
 #include "thread_pool.h"
 
-#include <pthread.h>
-
-
-#define LISTEN_PORT 80
+#define LISTEN_PORT 8080
 #define BACKLOG 64
 #define NUM_WORKERS 10
 
@@ -24,19 +21,22 @@ static void die(const char *msg) {
     exit(EXIT_FAILURE);
 }
 
-
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
 
     cache_init();
-
     thread_pool_init(NUM_WORKERS);
 
     int listen_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (listen_socket < 0) die("socket");
+    if (listen_socket < 0) {
+        die("socket");
+    }
+
+    printf("listen_socket = %d\n", listen_socket);
 
     int opt = 1;
-    if (setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+    if (setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR,
+                   &opt, sizeof(opt)) < 0) {
         die("setsockopt");
     }
 
@@ -59,14 +59,15 @@ int main(void) {
     while (1) {
         struct sockaddr_in client_addr;
         socklen_t clen = sizeof(client_addr);
-        int client_socket = accept(listen_socket,(struct sockaddr*)&client_addr, &clen);
+        int client_socket = accept(listen_socket,
+                                   (struct sockaddr*)&client_addr, &clen);
         if (client_socket < 0) {
             if (errno == EINTR) continue;
             perror("accept");
             continue;
         }
 
-       thread_pool_add_client(client_socket);
+        thread_pool_add_client(client_socket);
     }
 
     close(listen_socket);

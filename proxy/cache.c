@@ -80,20 +80,68 @@ int cache_evict_index(void) {
 
 //TODO: написать функцию для подготовки места в кэше. 
 int cache_init_entry(int idx, const char *url){
-
+    pthread_mutex_lock(&cache_mutex);
+    cache[idx].valid = 0;
+    strncpy(cache[idx].url, url, MAX_URL_LEN - 1);
+    cache[idx].url[MAX_URL_LEN - 1] = '\0';
+    cache[idx].size = 0;
+    cache[idx].capacity = 64 * 1024;
+    cache[idx].data = malloc(cache[idx].capacity);
+    if (!cache[idx].data) {
+        pthread_mutex_unlock(&cache_mutex);
+        return -1;
+    }
+    cache[idx].last_used = time(NULL);
+    pthread_mutex_unlock(&cache_mutex);
+    return 0;
 }
 //TODO: Написать функцию по добавлению data в кэш.
 int cache_append(int idx, const char *buf, size_t n){
+    pthread_mutex_lock(&cache_mutex);
+    if (!cache[idx].data) {
+        pthread_mutex_unlock(&cache_mutex);
+        return -1;
+    }
 
+    if (cache[idx].size + n > CACHE_MAX_SIZE) {
+        pthread_mutex_unlock(&cache_mutex);
+        return -1;
+    }
+
+    if (cache[idx].size + n > cache[idx].capacity) {
+        size_t newcap = cache[idx].capacity * 2;
+        while (newcap < cache[idx].size + n) newcap *= 2;
+        char *tmp = realloc(cache[idx].data, newcap);
+        if (!tmp) {
+            pthread_mutex_unlock(&cache_mutex);
+            return -1;
+        }
+        cache[idx].data = tmp;
+        cache[idx].capacity = newcap;
+    }
+
+    memcpy(cache[idx].data + cache[idx].size, buf, n);
+    cache[idx].size += n;
+    pthread_mutex_unlock(&cache_mutex);
+    return 0;
 }
 
 //TODO: Написать функцию по отметки блока кэша как valid, то есть его можно использовать для подгрузки из кэша
 void cache_mark_valid(int idx){
-
+    pthread_mutex_lock(&cache_mutex);
+    cache[idx].valid = 1;
+    cache[idx].last_used = time(NULL);
+    pthread_mutex_unlock(&cache_mutex);
 }
 
 //TODO: Написать функцию для очистки битого кэша (если появилась ошибка при загрузке в кэш)
 void cache_free_unvalid(int idx){
-
+    pthread_mutex_lock(&cache_mutex);
+    free(cache[idx].data);
+    cache[idx].data = NULL;
+    cache[idx].size = 0;
+    cache[idx].capacity = 0;
+    cache[idx].url[0] = '\0';
+    pthread_mutex_unlock(&cache_mutex);
 }
 
