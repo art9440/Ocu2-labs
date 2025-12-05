@@ -20,4 +20,6 @@ void cache_init(void);
 int cache_find(const char *url);
 
 int cache_copy_entry_data(int idx, char **out_buf, size_t *out_size);
+
+int cache_evict_index(void);
 #endif

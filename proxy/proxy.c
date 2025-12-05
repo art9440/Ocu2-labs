@@ -6,6 +6,9 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <netdb.h>
+#include <time.h>
+#include <unistd.h>
 
 
 #define BUF_SIZE 4096
@@ -78,6 +81,33 @@ static int parse_request_line(const char *line,char *method,char *url){
     return 0;
 }
 
+static int connect_to_host(const char *host, int port) {
+    char port_str[16];
+    struct addrinfo hints, *res, *rp;
+
+    int sock = -1;
+
+    snprintf(port_str, sizeof(port_str), "%d", port);
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if (getaddrinfo(host, port_str, &hints, &res) != 0){
+        return -1;
+    }
+
+    for (rp = res; rp != NULL; rp = rp->ai_next) {
+        sock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+        if (sock == -1) continue;
+        if (connect(sock, rp->ai_addr, rp->ai_addrlen) == 0) break;
+        close(sock);
+        sock = -1;
+    }
+
+    freeaddrinfo(res);
+    return sock;
+}
+
 void handle_client_socket(int client_sock) {
     char buf[BUF_SIZE];
 
@@ -118,7 +148,7 @@ void handle_client_socket(int client_sock) {
         if (strcmp(line, "\r\n") == 0 || strcmp(line, "\n") == 0) break;
     }
 
-    //TODO: попытаться достать из кэша
+
     int idx = cache_find(url);
     
     if (idx >= 0){
@@ -149,5 +179,46 @@ void handle_client_socket(int client_sock) {
     if (origin < 0) {
         fprintf(stderr, "Failed to connect to origin: %s:%d\n", host, port);
         return;
+    }
+
+    char req[1024];
+
+    int req_len = snprintf(req, sizeof(req), 
+                    "GET %s HTTP/1.0\r\n"
+                           "Host: %s\r\n"
+                           "Connection: close\r\n"
+                           "\r\n",
+                           path, host);
+    send_all(origin, req, (size_t) req_len);
+
+    idx = cache_evict_index();
+    if (cache_init_entry(idx, url) < 0) {
+        fprintf(stderr, "Cache init failed, streaming without cache \n");
+        while ((n = recv(origin, buf, sizeof(buf), 0)) > 0) {
+            if (send_all(client_sock, buf, (size_t)n) < 0) break;
+        }
+        close(origin);
+        close(client_sock);
+        return;
+    }
+
+    int cache_ok = 1;
+
+    while ((n = recv(origin, buf, sizeof(buf), 0)) > 0) {
+        if (cache_ok){
+            if (cache_append(idx, buf, (size_t)n) < 0) {
+            cache_ok = 0;
+            }
+        }
+
+        if (send_all(client_sock, buf, (size_t)n) < 0) {
+        break;
+        }
+    }
+
+    if (cache_ok) {
+    cache_mark_valid(idx);
+    } else {
+        cache_free_unvalid(idx);
     }
 }

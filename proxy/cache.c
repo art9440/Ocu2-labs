@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 
 
@@ -45,4 +46,40 @@ int cache_copy_entry_data(int idx, char **out_buf, size_t *out_size) {
     pthread_mutex_unlock(&cache_mutex);
     return ok;
 }
+
+int cache_evict_index(void) {
+    int idx = -1;
+
+    pthread_mutex_lock(&cache_mutex);
+
+    for (int i = 0; i < NUM_CACHE_ENTRIES; i++){
+        if (!cache[i].valid && cache[i].data == NULL) {
+            idx = i;
+            break;
+        }
+    }
+    if (idx == -1){
+        time_t oldest = time(NULL);
+        int oldest_i = 0;
+        for (int i = 0; i < NUM_CACHE_ENTRIES; i++) {
+            if (!cache[i].valid && cache[i].last_used <= oldest){
+                oldest = cache[i].last_used;
+                oldest_i = i;
+            }
+        }
+        idx = oldest_i;
+        free(cache[idx].data);
+        cache[idx].data = NULL;
+        cache[idx].size = 0;
+        cache[idx].capacity = 0;
+        cache[idx].valid = 0;
+    }
+    pthread_mutex_unlock(&cache_mutex);
+    return idx;
+}
+
+//TODO: написать функцию для подготовки места в кэше. 
+//TODO: Написать функцию по добавлению data в кэш. 
+//TODO: Написать функцию по отметки блока кэша как valid, то есть его можно использовать для подгрузки из кэша
+//TODO: Написать функцию для очистки битого кэша (если появилась ошибка при загрузке в кэш)
 
