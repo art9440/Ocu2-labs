@@ -22,4 +22,12 @@ int cache_find(const char *url);
 int cache_copy_entry_data(int idx, char **out_buf, size_t *out_size);
 
 int cache_evict_index(void);
+
+int cache_init_entry(int idx, const char *url);
+
+int cache_append(int idx, const char *buf, size_t n);
+
+void cache_mark_valid(int idx);
+
+void cache_free_unvalid(int idx);
 #endif

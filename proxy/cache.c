@@ -79,7 +79,21 @@ int cache_evict_index(void) {
 }
 
 //TODO: написать функцию для подготовки места в кэше. 
-//TODO: Написать функцию по добавлению data в кэш. 
+int cache_init_entry(int idx, const char *url){
+
+}
+//TODO: Написать функцию по добавлению data в кэш.
+int cache_append(int idx, const char *buf, size_t n){
+
+}
+
 //TODO: Написать функцию по отметки блока кэша как valid, то есть его можно использовать для подгрузки из кэша
+void cache_mark_valid(int idx){
+
+}
+
 //TODO: Написать функцию для очистки битого кэша (если появилась ошибка при загрузке в кэш)
+void cache_free_unvalid(int idx){
+
+}
 
