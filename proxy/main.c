@@ -11,6 +11,7 @@
 
 #include "cache.h"
 #include "thread_pool.h"
+#include "logger.h"
 
 #define LISTEN_PORT 8080
 #define BACKLOG 64
@@ -54,7 +55,7 @@ int main(void) {
         die("listen");
     }
 
-    printf("Proxy listening on port %d\n", LISTEN_PORT);
+    LOG_INFOF("Proxy listening on port %d", LISTEN_PORT);
 
     while (1) {
         struct sockaddr_in client_addr;
@@ -66,6 +67,12 @@ int main(void) {
             perror("accept");
             continue;
         }
+
+        char ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &client_addr.sin_addr, ip, sizeof(ip));
+        int cport = ntohs(client_addr.sin_port);
+
+        LOG_INFOF("New connection fd=%d from %s:%d", client_socket, ip, cport);
 
         thread_pool_add_client(client_socket);
     }

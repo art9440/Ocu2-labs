@@ -45,7 +45,7 @@ static void queue_push(client_queue_t *q, int client_sock) {
 
 static int queue_pop(client_queue_t *q) {
     pthread_mutex_lock(&q->mutex);
-    while (q->count == QUEUE_SIZE){
+    while (q->count == 0){
         pthread_cond_wait(&q->not_empty, &q->mutex);
     }
     int sock = q->sockets[q->head];

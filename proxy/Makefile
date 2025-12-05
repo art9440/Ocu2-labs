@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -pthread -g
 
-OBJS = main.o proxy.o cache.o thread_pool.o
+OBJS = main.o proxy.o cache.o thread_pool.o logger.o
 
 all: proxy
 
@@ -19,6 +19,9 @@ cache.o: cache.c cache.h
 
 thread_pool.o: thread_pool.c thread_pool.h
 	$(CC) $(CFLAGS) -c thread_pool.c
+
+logger.o: logger.c logger.h
+	$(CC) $(CFLAGS) -c logger.c
 
 clean:
 	rm -f proxy $(OBJS)

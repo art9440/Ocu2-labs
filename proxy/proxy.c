@@ -1,5 +1,6 @@
 #include "proxy.h"
 #include "cache.h"
+#include "logger.h"
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -113,10 +114,17 @@ void handle_client_socket(int client_sock) {
 
     ssize_t n;
 
+    struct timespec t_start, t_end;
+    clock_gettime(CLOCK_MONOTONIC, &t_start);
+
     int pos = 0;
     while(pos < (int)sizeof(buf) - 1) {
         n = recv(client_sock, buf + pos, 1, 0);
-        if (n <= 0) return;
+        if (n <= 0){
+            LOG_DEBUGF("fd=%d: recv() failed while reading request line (n=%zd, errno=%d)",
+                       client_sock, n, errno);
+            return;
+        }
 
         if (buf[pos] == '\n') break;
         pos += 1;
@@ -128,9 +136,11 @@ void handle_client_socket(int client_sock) {
     char url[MAX_URL_LEN];
 
     if (parse_request_line(buf, method, url) < 0) {
-        fprintf(stderr, "Bad request line: %s\n", buf);
+        LOG_WARNF("fd=%d: bad request line: %s", client_sock, buf);
         return;
     }
+
+    LOG_INFOF("fd=%d: request: %s %s", client_sock, method, url);
 
     char line[BUF_SIZE];
     while (1) {
@@ -155,29 +165,38 @@ void handle_client_socket(int client_sock) {
         char *data = NULL;
         size_t size = 0;
         if (cache_copy_entry_data(idx, &data, &size) == 0 && data) {
-            send_all(client_sock, data, size);
+            LOG_INFOF("fd=%d: cache HIT for %s (size=%zu)", client_sock, url, size);
+            if (send_all(client_sock, data, size) < 0){
+                LOG_WARNF("fd=%d: send_all() failed on cache HIT (errno=%d)", client_sock, errno);
+            }
             free(data);
+        }else{
+             LOG_WARNF("fd=%d: cache HIT but failed to copy data for %s", client_sock, url);
         }
+
+        clock_gettime(CLOCK_MONOTONIC, &t_end);
+        double ms = (t_end.tv_sec - t_start.tv_sec) * 1000.0 +
+                    (t_end.tv_nsec - t_start.tv_nsec) / 1e6;
+        LOG_INFOF("fd=%d: finished (cache) %s in %.2f ms", client_sock, url, ms);
         return;
     }
 
+    LOG_INFOF("fd=%d: cache MISS for %s", client_sock, url);
 
-    //TODO: если в кэше нет, то отправляем запрос к origin-серверу
-    //далее, получая данные с origin-сервера одновременно записывать их в кэш и отправлять клиенту
-    //Даже если во время записи в кэш произойдет ошибка, продолжить отправлять данные клиенту
 
     char host[256];
     char path[512];
     int port;
-
     if (parse_url(url, host, sizeof(host), &port, path, sizeof(path)) < 0) {
-        fprintf(stderr, "Failed to parse URL: %s\n", url);
+        LOG_WARNF("fd=%d: failed to parse URL: %s", client_sock, url);
         return;
     }
 
+     LOG_INFOF("fd=%d: forwarding to origin %s:%d path=%s", client_sock, host, port, path);
+
     int origin = connect_to_host(host, port);
     if (origin < 0) {
-        fprintf(stderr, "Failed to connect to origin: %s:%d\n", host, port);
+        LOG_ERRORF("fd=%d: failed to connect to origin %s:%d", client_sock, host, port);
         return;
     }
 
@@ -189,33 +208,52 @@ void handle_client_socket(int client_sock) {
                            "Connection: close\r\n"
                            "\r\n",
                            path, host);
-    send_all(origin, req, (size_t) req_len);
+    if (send_all(origin, req, (size_t) req_len) < 0){
+        LOG_WARNF("fd=%d: failed to send request to origin %s:%d", client_sock, host, port);
+        close(origin);
+        return;
+    }
 
     idx = cache_evict_index();
     if (cache_init_entry(idx, url) < 0) {
-        fprintf(stderr, "Cache init failed, streaming without cache \n");
+        LOG_WARNF("fd=%d: cache init failed for %s, streaming without cache", client_sock, url);
+
+        size_t total_bytes = 0;
         while ((n = recv(origin, buf, sizeof(buf), 0)) > 0) {
             if (send_all(client_sock, buf, (size_t)n) < 0) break;
+            total_bytes += (size_t)n;
         }
+
+        clock_gettime(CLOCK_MONOTONIC, &t_end);
+        double ms = (t_end.tv_sec - t_start.tv_sec) * 1000.0 +
+                    (t_end.tv_nsec - t_start.tv_nsec) / 1e6;
+        LOG_INFOF("fd=%d: finished (no-cache) %s, bytes=%zu, time=%.2f ms",
+                  client_sock, url, total_bytes, ms);
+
         close(origin);
-        close(client_sock);
         return;
     }
 
     int cache_ok = 1;
+    size_t total_bytes = 0;
 
     while ((n = recv(origin, buf, sizeof(buf), 0)) > 0) {
         if (cache_ok){
             if (cache_append(idx, buf, (size_t)n) < 0) {
+            LOG_WARNF("fd=%d: cache_append failed for %s, stop caching", client_sock, url);
             cache_ok = 0;
             }
         }
 
         if (send_all(client_sock, buf, (size_t)n) < 0) {
-        break;
+            LOG_WARNF("fd=%d: send_all() failed while streaming %s (errno=%d)",
+                      client_sock, url, errno);
+            break;
         }
+        total_bytes += (size_t)n;
     }
 
+    
     if (cache_ok) {
     cache_mark_valid(idx);
     } else {
