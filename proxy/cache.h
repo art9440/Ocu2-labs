@@ -1,33 +1,40 @@
 #ifndef CACHE_H
 #define CACHE_H
 
-#include <signal.h>
-#define MAX_URL_LEN 512
-#define NUM_CACHE_ENTRIES 32
-#define CACHE_MAX_SIZE (1024 * 1024 * 5)
+#include <pthread.h>
+#include <stddef.h>
+#include <time.h>
 
-typedef struct{
-    int valid;
+#define MAX_URL_LEN       512
+#define NUM_CACHE_ENTRIES 32
+
+typedef struct cache_entry {
+    int in_use;
     char url[MAX_URL_LEN];
-    char *data;
+
+    char  *data;
     size_t size;
     size_t capacity;
+
+    int complete;
+    int failed;
+
+    int refcnt;
     time_t last_used;
-}cache_entry_t;
+
+    pthread_mutex_t lock;
+    pthread_cond_t  cond;
+} cache_entry_t;
 
 void cache_init(void);
 
-int cache_find(const char *url);
+cache_entry_t *cache_get(const char *url, int *is_writer);
 
-int cache_copy_entry_data(int idx, char **out_buf, size_t *out_size);
+int  cache_append(cache_entry_t *e, const void *data, size_t len);
 
-int cache_evict_index(void);
+void cache_mark_valid(cache_entry_t *e);
+void cache_mark_failed(cache_entry_t *e);
 
-int cache_init_entry(int idx, const char *url);
+void cache_release(cache_entry_t *e);
 
-int cache_append(int idx, const char *buf, size_t n);
-
-void cache_mark_valid(int idx);
-
-void cache_free_unvalid(int idx);
 #endif

@@ -1,147 +1,170 @@
 #include "cache.h"
 
-#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-
-
 
 static cache_entry_t cache[NUM_CACHE_ENTRIES];
-static pthread_mutex_t cache_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t cache_table_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void cache_init(void){
-    memset(cache, 0, sizeof(cache));
+static void cache_entry_reset(cache_entry_t *e) {
+    if (!e) return;
+
+    if (e->data) {
+        free(e->data);
+        e->data = NULL;
+    }
+    e->data      = NULL;
+    e->size      = 0;
+    e->capacity  = 0;
+    e->complete  = 0;
+    e->failed    = 0;
+    e->refcnt    = 0;
+    e->last_used = 0;
+    e->in_use    = 0;
+    e->url[0]    = '\0';
 }
 
-
-int cache_find(const char *url) {
-    int idx = -1;
-
-    pthread_mutex_lock(&cache_mutex);
-    for (int i = 0; i < NUM_CACHE_ENTRIES; i++){
-        if (cache[i].valid && strcmp(cache[i].url, url) == 0) {
-            cache[i].last_used = time(NULL);
-            idx = i;
-            break;
-        }
+void cache_init(void) {
+    pthread_mutex_lock(&cache_table_mutex);
+    for (int i = 0; i < NUM_CACHE_ENTRIES; ++i) {
+        cache_entry_t *e = &cache[i];
+        memset(e, 0, sizeof(*e));
+        pthread_mutex_init(&e->lock, NULL);
+        pthread_cond_init(&e->cond, NULL);
+        e->in_use = 0;
     }
-    pthread_mutex_unlock(&cache_mutex);
-    return idx;
+    pthread_mutex_unlock(&cache_table_mutex);
 }
 
+static int cache_evict_lru_index(void) {
+    time_t oldest = 0;
+    int oldest_idx = -1;
 
-int cache_copy_entry_data(int idx, char **out_buf, size_t *out_size) {
-    int ok = -1;
-
-    pthread_mutex_lock(&cache_mutex);
-    if (cache[idx].valid && cache[idx].data && cache[idx].size > 0) {
-        *out_size = cache[idx].size;
-        *out_buf = malloc(*out_size);
-        if (*out_buf){
-            memcpy(*out_buf, cache[idx].data, *out_size);
-            ok = 0;
+    for (int i = 0; i < NUM_CACHE_ENTRIES; ++i) {
+        cache_entry_t *e = &cache[i];
+        if (!e->in_use) {
+            return i;
         }
-    }
-    pthread_mutex_unlock(&cache_mutex);
-    return ok;
-}
-
-int cache_evict_index(void) {
-    int idx = -1;
-
-    pthread_mutex_lock(&cache_mutex);
-
-    for (int i = 0; i < NUM_CACHE_ENTRIES; i++){
-        if (!cache[i].valid && cache[i].data == NULL) {
-            idx = i;
-            break;
-        }
-    }
-    if (idx == -1){
-        time_t oldest = time(NULL);
-        int oldest_i = 0;
-        for (int i = 0; i < NUM_CACHE_ENTRIES; i++) {
-            if (!cache[i].valid && cache[i].last_used <= oldest){
-                oldest = cache[i].last_used;
-                oldest_i = i;
+        if (e->refcnt == 0) {
+            if (oldest_idx == -1 || e->last_used <= oldest) {
+                oldest = e->last_used;
+                oldest_idx = i;
             }
         }
-        idx = oldest_i;
-        free(cache[idx].data);
-        cache[idx].data = NULL;
-        cache[idx].size = 0;
-        cache[idx].capacity = 0;
-        cache[idx].valid = 0;
     }
-    pthread_mutex_unlock(&cache_mutex);
-    return idx;
+    return oldest_idx;
 }
 
-//TODO: написать функцию для подготовки места в кэше. 
-int cache_init_entry(int idx, const char *url){
-    pthread_mutex_lock(&cache_mutex);
-    cache[idx].valid = 0;
-    strncpy(cache[idx].url, url, MAX_URL_LEN - 1);
-    cache[idx].url[MAX_URL_LEN - 1] = '\0';
-    cache[idx].size = 0;
-    cache[idx].capacity = 64 * 1024;
-    cache[idx].data = malloc(cache[idx].capacity);
-    if (!cache[idx].data) {
-        pthread_mutex_unlock(&cache_mutex);
-        return -1;
+cache_entry_t *cache_get(const char *url, int *is_writer) {
+    if (!url || !is_writer) return NULL;
+
+    pthread_mutex_lock(&cache_table_mutex);
+
+    for (int i = 0; i < NUM_CACHE_ENTRIES; ++i) {
+        cache_entry_t *e = &cache[i];
+        if (e->in_use && strcmp(e->url, url) == 0) {
+            e->refcnt++;
+            e->last_used = time(NULL);
+            *is_writer = 0;
+            pthread_mutex_unlock(&cache_table_mutex);
+            return e;
+        }
     }
-    cache[idx].last_used = time(NULL);
-    pthread_mutex_unlock(&cache_mutex);
-    return 0;
+
+    int idx = -1;
+    for (int i = 0; i < NUM_CACHE_ENTRIES; ++i) {
+        if (!cache[i].in_use) {
+            idx = i;
+            break;
+        }
+    }
+
+    if (idx == -1) {
+        idx = cache_evict_lru_index();
+        if (idx == -1) {
+            pthread_mutex_unlock(&cache_table_mutex);
+            return NULL;
+        }
+        cache_entry_reset(&cache[idx]);
+    }
+
+    cache_entry_t *e = &cache[idx];
+    cache_entry_reset(e);
+    e->in_use = 1;
+    strncpy(e->url, url, MAX_URL_LEN - 1);
+    e->url[MAX_URL_LEN - 1] = '\0';
+    e->data      = NULL;
+    e->size      = 0;
+    e->capacity  = 0;
+    e->complete  = 0;
+    e->failed    = 0;
+    e->refcnt    = 1;
+    e->last_used = time(NULL);
+
+    *is_writer = 1;
+    pthread_mutex_unlock(&cache_table_mutex);
+    return e;
 }
-//TODO: Написать функцию по добавлению data в кэш.
-int cache_append(int idx, const char *buf, size_t n){
-    pthread_mutex_lock(&cache_mutex);
-    if (!cache[idx].data) {
-        pthread_mutex_unlock(&cache_mutex);
+
+int cache_append(cache_entry_t *e, const void *data, size_t len) {
+    if (!e || !data || len == 0) return 0;
+
+    pthread_mutex_lock(&e->lock);
+
+    if (e->failed) {
+        pthread_mutex_unlock(&e->lock);
         return -1;
     }
 
-    if (cache[idx].size + n > CACHE_MAX_SIZE) {
-        pthread_mutex_unlock(&cache_mutex);
-        return -1;
-    }
+    size_t need = e->size + len;
+    if (need > e->capacity) {
+        size_t newcap = e->capacity ? e->capacity * 2 : 64 * 1024;
+        if (newcap < need)
+            newcap = need;
 
-    if (cache[idx].size + n > cache[idx].capacity) {
-        size_t newcap = cache[idx].capacity * 2;
-        while (newcap < cache[idx].size + n) newcap *= 2;
-        char *tmp = realloc(cache[idx].data, newcap);
-        if (!tmp) {
-            pthread_mutex_unlock(&cache_mutex);
+        char *newdata = realloc(e->data, newcap);
+        if (!newdata) {
+            e->failed = 1;
+            pthread_cond_broadcast(&e->cond);
+            pthread_mutex_unlock(&e->lock);
             return -1;
         }
-        cache[idx].data = tmp;
-        cache[idx].capacity = newcap;
+        e->data     = newdata;
+        e->capacity = newcap;
     }
 
-    memcpy(cache[idx].data + cache[idx].size, buf, n);
-    cache[idx].size += n;
-    pthread_mutex_unlock(&cache_mutex);
+    memcpy(e->data + e->size, data, len);
+    e->size += len;
+    e->last_used = time(NULL);
+
+    pthread_cond_broadcast(&e->cond);
+    pthread_mutex_unlock(&e->lock);
+
     return 0;
 }
 
-//TODO: Написать функцию по отметки блока кэша как valid, то есть его можно использовать для подгрузки из кэша
-void cache_mark_valid(int idx){
-    pthread_mutex_lock(&cache_mutex);
-    cache[idx].valid = 1;
-    cache[idx].last_used = time(NULL);
-    pthread_mutex_unlock(&cache_mutex);
+void cache_mark_valid(cache_entry_t *e) {
+    if (!e) return;
+    pthread_mutex_lock(&e->lock);
+    e->complete = 1;
+    e->last_used = time(NULL);
+    pthread_cond_broadcast(&e->cond);
+    pthread_mutex_unlock(&e->lock);
 }
 
-//TODO: Написать функцию для очистки битого кэша (если появилась ошибка при загрузке в кэш)
-void cache_free_unvalid(int idx){
-    pthread_mutex_lock(&cache_mutex);
-    free(cache[idx].data);
-    cache[idx].data = NULL;
-    cache[idx].size = 0;
-    cache[idx].capacity = 0;
-    cache[idx].url[0] = '\0';
-    pthread_mutex_unlock(&cache_mutex);
+void cache_mark_failed(cache_entry_t *e) {
+    if (!e) return;
+    pthread_mutex_lock(&e->lock);
+    e->failed = 1;
+    pthread_cond_broadcast(&e->cond);
+    pthread_mutex_unlock(&e->lock);
 }
 
+void cache_release(cache_entry_t *e) {
+    if (!e) return;
+
+    pthread_mutex_lock(&cache_table_mutex);
+    if (e->refcnt > 0)
+        e->refcnt--;
+    pthread_mutex_unlock(&cache_table_mutex);
+}
