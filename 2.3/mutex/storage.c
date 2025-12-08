@@ -15,6 +15,7 @@ void init_storage(Storage* storage) {
     pthread_mutex_init(&sentinel->sync, NULL);
 
     storage->first = sentinel;
+    storage->last  = sentinel;
 }
 
 void generate_random_string(char *buffer, int max_length){
@@ -42,12 +43,9 @@ Node* create_node(char const*  value){
 void add_to_storage(Storage* storage, const char* value){
     Node* new_node = create_node(value);
     if (!new_node) return; 
-    
-    Node* cur = storage->first;   
-    while (cur->next != NULL) {
-        cur = cur->next;
-    }
-    cur->next = new_node;
+
+    storage->last->next = new_node; 
+    storage->last = new_node;
 
     storage->count++;
 }

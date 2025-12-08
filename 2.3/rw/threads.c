@@ -57,7 +57,6 @@ static void scan_pairs(Storage* storage,
             pthread_rwlock_unlock(&left->sync);
             left = right;
 
-            usleep(100);
         }
 
         pthread_rwlock_unlock(&left->sync);
@@ -67,7 +66,6 @@ static void scan_pairs(Storage* storage,
             __sync_fetch_and_add(pairs_counter, local_pairs);
         }
 
-        usleep(100);
     }
 }
 
@@ -137,7 +135,6 @@ void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long*
         prev = current;
         current = next;
 
-        usleep(100);
     }
     
     Node* next = current->next;
@@ -164,7 +161,6 @@ void do_random_swap(Storage* storage, int (*need_swap)(int, int), volatile long*
     pthread_rwlock_unlock(&current->sync);
     pthread_rwlock_unlock(&prev->sync);
 
-    usleep(100);
 }
 
 // Поток для перестановки на возрастание
@@ -173,7 +169,6 @@ void* swap_asc_thread(void* arg) {
     
     while (1) {
         do_random_swap(storage, need_swap_asc, &swap_asc);
-        usleep(1000);
     }
     return NULL;
 }
@@ -184,7 +179,6 @@ void* swap_desc_thread(void* arg) {
     
     while (1) {
         do_random_swap(storage, need_swap_desc, &swap_desc);
-        usleep(1000);
     }
     return NULL;
 }
@@ -195,7 +189,6 @@ void* swap_equal_thread(void* arg) {
     
     while (1) {
         do_random_swap(storage, need_swap_equal, &swap_eq);
-        usleep(1000);
     }
     return NULL;
 }

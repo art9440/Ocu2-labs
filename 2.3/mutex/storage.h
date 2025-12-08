@@ -12,6 +12,7 @@ typedef struct _Node {
 
 typedef struct _Storage {
     Node *first;
+    Node *last;
     int count;
     volatile int stop;
 } Storage;
