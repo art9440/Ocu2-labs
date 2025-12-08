@@ -1,0 +1,149 @@
+При n = 100:
+[monitor][rwlock] iter: asc=13 desc=6 equal=5 | pairs: asc=562 desc=321 equal=10 | swaps: asc=1 desc=0 equal=0
+[monitor][rwlock] iter: asc=152980 desc=151026 equal=148712 | pairs: asc=6692600 desc=8080235 equal=260622 | swaps: asc=2 desc=1 equal=445458
+[monitor][rwlock] iter: asc=296547 desc=291740 equal=293864 | pairs: asc=13197358 desc=15247451 equal=661362 | swaps: asc=3 desc=2 equal=575976
+[monitor][rwlock] iter: asc=459791 desc=459569 equal=460055 | pairs: asc=20924355 desc=23413613 equal=1159935 | swaps: asc=4 desc=2 equal=814090
+[monitor][rwlock] iter: asc=612676 desc=607896 equal=613819 | pairs: asc=28110479 desc=30681785 equal=1621227 | swaps: asc=4 desc=3 equal=960795
+[monitor][rwlock] iter: asc=767356 desc=756618 equal=765040 | pairs: asc=35343129 desc=38005662 equal=2074890 | swaps: asc=5 desc=3 equal=1301687
+[monitor][rwlock] iter: asc=922719 desc=906617 equal=915552 | pairs: asc=42760676 desc=45243369 equal=2526426 | swaps: asc=6 desc=4 equal=1448986
+[monitor][rwlock] iter: asc=1078709 desc=1068986 equal=1078147 | pairs: asc=50290548 desc=52992108 equal=3014211 | swaps: asc=7 desc=5 equal=1621393
+[monitor][rwlock] iter: asc=1266973 desc=1252781 equal=1264033 | pairs: asc=59376320 desc=61768297 equal=3571869 | swaps: asc=7 desc=5 equal=1911204
+[monitor][rwlock] iter: asc=1423590 desc=1411641 equal=1419576 | pairs: asc=66926023 desc=69368318 equal=4036930 | swaps: asc=9 desc=7 equal=2091709
+[monitor][rwlock] iter: asc=1580292 desc=1574391 equal=1576544 | pairs: asc=74208136 desc=77596304 equal=4350866 | swaps: asc=9 desc=9 equal=2997727
+[monitor][rwlock] iter: asc=1710418 desc=1704101 equal=1709168 | pairs: asc=80418806 desc=83985882 equal=4616114 | swaps: asc=9 desc=10 equal=3664533
+[monitor][rwlock] iter: asc=1853826 desc=1851250 equal=1852730 | pairs: asc=87268135 desc=91231502 equal=4903238 | swaps: asc=10 desc=11 equal=3832904
+[monitor][rwlock] iter: asc=1987350 desc=1984865 equal=1982706 | pairs: asc=93843260 desc=97612894 equal=5163190 | swaps: asc=11 desc=11 equal=3942497
+[monitor][rwlock] iter: asc=2115668 desc=2119225 equal=2111656 | pairs: asc=100128039 desc=104066760 equal=5421090 | swaps: asc=13 desc=12 equal=4202794
+Command exited with non-zero status 124
+        Command being timed: "timeout 30s ./build/task23_rw"
+        User time (seconds): 84.18
+        System time (seconds): 34.30
+        Percent of CPU this job got: 394%
+        Elapsed (wall clock) time (h:mm:ss or m:ss): 0:30.00
+        Average shared text size (kbytes): 0
+        Average unshared data size (kbytes): 0
+        Average stack size (kbytes): 0
+        Average total size (kbytes): 0
+        Maximum resident set size (kbytes): 1848
+        Average resident set size (kbytes): 0
+        Major (requiring I/O) page faults: 0
+        Minor (reclaiming a frame) page faults: 220
+        Voluntary context switches: 16137550
+        Involuntary context switches: 3037
+        Swaps: 0
+        File system inputs: 0
+        File system outputs: 0
+        Socket messages sent: 0
+        Socket messages received: 0
+        Signals delivered: 0
+        Page size (bytes): 4096
+        Exit status: 124
+
+При n = 1000:
+[monitor][rwlock] iter: asc=2 desc=1 equal=1 | pairs: asc=1004 desc=488 equal=9 | swaps: asc=0 desc=0 equal=4
+[monitor][rwlock] iter: asc=33706 desc=34795 equal=32338 | pairs: asc=16971005 desc=16961220 equal=258705 | swaps: asc=3 desc=0 equal=100461
+[monitor][rwlock] iter: asc=66454 desc=69669 equal=66856 | pairs: asc=33453962 desc=33968498 equal=534849 | swaps: asc=3 desc=1 equal=144094
+[monitor][rwlock] iter: asc=104444 desc=104629 equal=100912 | pairs: asc=52525128 desc=51061456 equal=807297 | swaps: asc=4 desc=2 equal=197976
+[monitor][rwlock] iter: asc=144853 desc=137927 equal=133638 | pairs: asc=72813669 desc=67343947 equal=1069105 | swaps: asc=6 desc=2 equal=276205
+[monitor][rwlock] iter: asc=186811 desc=175047 equal=165793 | pairs: asc=93872208 desc=85499163 equal=1326345 | swaps: asc=6 desc=4 equal=398873
+[monitor][rwlock] iter: asc=216041 desc=203539 equal=193944 | pairs: asc=108568064 desc=99409720 equal=1551553 | swaps: asc=8 desc=5 equal=536064
+[monitor][rwlock] iter: asc=252632 desc=237323 equal=224072 | pairs: asc=126936966 desc=115929931 equal=1792577 | swaps: asc=9 desc=7 equal=578167
+[monitor][rwlock] iter: asc=288011 desc=270337 equal=256347 | pairs: asc=144733034 desc=132040422 equal=2050777 | swaps: asc=10 desc=8 equal=633020
+[monitor][rwlock] iter: asc=313333 desc=297227 equal=280284 | pairs: asc=157416770 desc=145220090 equal=2242273 | swaps: asc=10 desc=9 equal=2109988
+[monitor][rwlock] iter: asc=345876 desc=327895 equal=306532 | pairs: asc=173624024 desc=160339082 equal=2452257 | swaps: asc=10 desc=11 equal=2294308
+[monitor][rwlock] iter: asc=368668 desc=349278 equal=329141 | pairs: asc=184967438 desc=170886942 equal=2633129 | swaps: asc=11 desc=11 equal=2336191
+[monitor][rwlock] iter: asc=392758 desc=372659 equal=352173 | pairs: asc=196972902 desc=182405472 equal=2817385 | swaps: asc=12 desc=11 equal=2383481
+[monitor][rwlock] iter: asc=415574 desc=397048 equal=376870 | pairs: asc=208321083 desc=194443158 equal=3014961 | swaps: asc=12 desc=13 equal=2539231
+[monitor][rwlock] iter: asc=438680 desc=421947 equal=401967 | pairs: asc=219777906 desc=206771041 equal=3215737 | swaps: asc=13 desc=15 equal=2607208
+Command exited with non-zero status 124
+        Command being timed: "timeout 30s ./build/task23_rw"
+        User time (seconds): 161.22
+        System time (seconds): 18.74
+        Percent of CPU this job got: 599%
+        Elapsed (wall clock) time (h:mm:ss or m:ss): 0:30.00
+        Average shared text size (kbytes): 0
+        Average unshared data size (kbytes): 0
+        Average stack size (kbytes): 0
+        Average total size (kbytes): 0
+        Maximum resident set size (kbytes): 1800
+        Average resident set size (kbytes): 0
+        Major (requiring I/O) page faults: 0
+        Minor (reclaiming a frame) page faults: 256
+        Voluntary context switches: 5079273
+        Involuntary context switches: 2037
+        Swaps: 0
+        File system inputs: 0
+        File system outputs: 0
+        Socket messages sent: 0
+        Socket messages received: 0
+        Signals delivered: 0
+        Page size (bytes): 4096
+        Exit status: 124
+При n = 10000:
+[monitor][rwlock] iter: asc=0 desc=0 equal=0 | pairs: asc=0 desc=0 equal=0 | swaps: asc=0 desc=0 equal=0
+[monitor][rwlock] iter: asc=4145 desc=4165 equal=4113 | pairs: asc=20410057 desc=20762421 equal=370171 | swaps: asc=3 desc=1 equal=4820
+[monitor][rwlock] iter: asc=8238 desc=8135 equal=8441 | pairs: asc=40572233 desc=40544935 equal=759691 | swaps: asc=5 desc=2 equal=12566
+[monitor][rwlock] iter: asc=11866 desc=11765 equal=12077 | pairs: asc=58444093 desc=58632905 equal=1086931 | swaps: asc=7 desc=3 equal=22495
+[monitor][rwlock] iter: asc=15718 desc=15825 equal=16106 | pairs: asc=77418689 desc=78864501 equal=1449371 | swaps: asc=8 desc=5 equal=45331
+[monitor][rwlock] iter: asc=19865 desc=20090 equal=20446 | pairs: asc=97838711 desc=100126177 equal=1839190 | swaps: asc=9 desc=5 equal=107533
+[monitor][rwlock] iter: asc=24013 desc=24534 equal=25066 | pairs: asc=118267816 desc=122274874 equal=2254990 | swaps: asc=10 desc=5 equal=116873
+[monitor][rwlock] iter: asc=27302 desc=27780 equal=28350 | pairs: asc=134468894 desc=138450367 equal=2550407 | swaps: asc=11 desc=5 equal=121183
+[monitor][rwlock] iter: asc=30384 desc=30875 equal=31436 | pairs: asc=149651020 desc=153873174 equal=2827552 | swaps: asc=13 desc=6 equal=127657
+[monitor][rwlock] iter: asc=32947 desc=33428 equal=33981 | pairs: asc=162272869 desc=166599299 equal=3055603 | swaps: asc=14 desc=8 equal=141488
+[monitor][rwlock] iter: asc=36051 desc=36563 equal=37112 | pairs: asc=177565395 desc=182221985 equal=3334262 | swaps: asc=14 desc=10 equal=149392
+[monitor][rwlock] iter: asc=39007 desc=40299 equal=40127 | pairs: asc=192132953 desc=200834091 equal=3602411 | swaps: asc=14 desc=11 equal=168243
+[monitor][rwlock] iter: asc=41864 desc=43108 equal=43075 | pairs: asc=206208497 desc=214834540 equal=3862366 | swaps: asc=14 desc=11 equal=174822
+[monitor][rwlock] iter: asc=45322 desc=46121 equal=46077 | pairs: asc=223245682 desc=229851706 equal=4126542 | swaps: asc=15 desc=12 equal=186587
+[monitor][rwlock] iter: asc=48378 desc=49456 equal=49136 | pairs: asc=238304135 desc=246470720 equal=4396537 | swaps: asc=15 desc=12 equal=202960
+Command exited with non-zero status 124
+        Command being timed: "timeout 30s ./build/task23_rw"
+        User time (seconds): 175.01
+        System time (seconds): 11.45
+        Percent of CPU this job got: 621%
+        Elapsed (wall clock) time (h:mm:ss or m:ss): 0:30.00
+        Average shared text size (kbytes): 0
+        Average unshared data size (kbytes): 0
+        Average stack size (kbytes): 0
+        Average total size (kbytes): 0
+        Maximum resident set size (kbytes): 3400
+        Average resident set size (kbytes): 0
+        Major (requiring I/O) page faults: 0
+        Minor (reclaiming a frame) page faults: 662
+        Voluntary context switches: 3070923
+        Involuntary context switches: 1225
+        Swaps: 0
+        File system inputs: 0
+        File system outputs: 0
+        Socket messages sent: 0
+        Socket messages received: 0
+        Signals delivered: 0
+        Page size (bytes): 4096
+        Exit status: 124
+
+При n = 100000: та же проблема, что и в спинлоке. Пришлось запустить на 120 секуд, чтобы увидеть результат
+
+[monitor][rwlock] iter: asc=14020 desc=14893 equal=15008 | pairs: asc=693506532 desc=737740970 equal=14969298 | swaps: asc=41 desc=51 equal=213743
+Command exited with non-zero status 124
+        Command being timed: "timeout 120s ./build/task23_rw"
+        User time (seconds): 559.86
+        System time (seconds): 28.59
+        Percent of CPU this job got: 490%
+        Elapsed (wall clock) time (h:mm:ss or m:ss): 2:00.00
+        Average shared text size (kbytes): 0
+        Average unshared data size (kbytes): 0
+        Average stack size (kbytes): 0
+        Average total size (kbytes): 0
+        Maximum resident set size (kbytes): 18676
+        Average resident set size (kbytes): 0
+        Major (requiring I/O) page faults: 0
+        Minor (reclaiming a frame) page faults: 4635
+        Voluntary context switches: 5623022
+        Involuntary context switches: 3522
+        Swaps: 0
+        File system inputs: 0
+        File system outputs: 0
+        Socket messages sent: 0
+        Socket messages received: 0
+        Signals delivered: 0
+        Page size (bytes): 4096
+        Exit status: 124
