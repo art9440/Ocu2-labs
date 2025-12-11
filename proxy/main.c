@@ -13,7 +13,7 @@
 #include "thread_pool.h"
 #include "logger.h"
 
-#define LISTEN_PORT 8080
+#define LISTEN_PORT 4242
 #define BACKLOG 64
 #define NUM_WORKERS 10
 
