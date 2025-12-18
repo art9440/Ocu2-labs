@@ -19,6 +19,12 @@ add_executable(task16
 target_include_directories(task16 PRIVATE 1.6)
 target_link_libraries(task16 PRIVATE pthread)
 
+# ===== Задание 1.7 =====
+add_executable(task17
+  1.7/main.c
+  1.7/uthread.c
+)
+target_include_directories(task17 PRIVATE 1.7)
 
 # ===== Задание 2.4 =====
 add_executable(task24_spin
